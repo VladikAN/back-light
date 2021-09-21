@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -18,7 +20,7 @@ type Options struct {
 	Width int
 	// LED line height, how many LED's used for left and right parts of the screen. Can be formed in scuare or circle.
 	Height int
-	// Debug mode will use constant colors, ie red for top and bottom, green for left and right, yellow for the corners.
+	// Debug mode draw use constant colors. Red - top-left, Green - top-right, Blue - bottom-right and Yellow - bottom-left.
 	IsDebug bool
 	// Time ms between screen captures and data transfer to serial port.
 	RefreshRate int
@@ -72,7 +74,7 @@ func main() {
 		defer wg.Done()
 
 		if opt.IsDebug {
-			log.Println("Starting debug mode.\n* Yellow - corners.\n* Red - top and bottom.\n* Green - left and right.")
+			log.Println("Starting debug mode.\n* Red - top-left.\n* Green - top-right.\n* Blue - bottom-right.\n* Yellow - bottom-left.")
 		} else {
 			log.Printf("Capturing screen with %d ms refresh rate\n", worker.opt.RefreshRate)
 		}
@@ -84,11 +86,19 @@ func main() {
 				close(worker.in)
 				return // exit if ctx is done
 			case <-tick.C:
+				var rs []color.RGBA
 				if opt.IsDebug {
-					worker.drawDebug()
+					rs = worker.drawDebug()
 				} else {
-					worker.drawScreen()
+					rs = worker.drawScreen()
 				}
+
+				sb := &strings.Builder{}
+				for _, item := range rs {
+					sb.WriteString(String(&item))
+					sb.WriteString(";")
+				}
+				worker.in <- sb.String()
 			}
 		}
 	}()
@@ -96,12 +106,35 @@ func main() {
 	wg.Wait()
 }
 
-func (worker *worker) drawDebug() {
-	log.Println("TICK")
+func (worker *worker) drawDebug() []color.RGBA {
+	sz := worker.opt.Width*2 + worker.opt.Height*2
+	rs := make([]color.RGBA, sz)
+
+	rs = append(rs, color.RGBA{R: 255})
+	for i := 1; i < worker.opt.Width-1; i++ {
+		rs = append(rs, color.RGBA{})
+	}
+
+	rs = append(rs, color.RGBA{G: 255})
+	for i := 1; i < worker.opt.Height-1; i++ {
+		rs = append(rs, color.RGBA{})
+	}
+
+	rs = append(rs, color.RGBA{B: 255})
+	for i := 1; i < worker.opt.Width-1; i++ {
+		rs = append(rs, color.RGBA{})
+	}
+
+	rs = append(rs, color.RGBA{R: 255, G: 255})
+	for i := 1; i < worker.opt.Width-1; i++ {
+		rs = append(rs, color.RGBA{})
+	}
+
+	return rs
 }
 
-func (worker *worker) drawScreen() {
-
+func (worker *worker) drawScreen() []color.RGBA {
+	return nil
 }
 
 func (worker *worker) autoConnect() {
@@ -149,6 +182,10 @@ func connect(input <-chan string) error {
 	}
 
 	return nil
+}
+
+func String(c *color.RGBA) string {
+	return fmt.Sprintf("%d,%d,%d", c.R, c.G, c.B)
 }
 
 func getPort() (string, error) {
