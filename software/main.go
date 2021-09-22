@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -20,7 +19,7 @@ type Options struct {
 	Width int
 	// LED line height, how many LED's used for left and right parts of the screen. Can be formed in scuare or circle.
 	Height int
-	// Debug mode draw use constant colors. Red - top-left, Green - top-right, Blue - bottom-right and Yellow - bottom-left.
+	// Draw debug with constant colors. Red - top-left, Green - top-right, Blue - bottom-right and Yellow - bottom-left.
 	IsDebug bool
 	// Time ms between screen captures and data transfer to serial port.
 	RefreshRate int
@@ -43,9 +42,9 @@ func main() {
 		Timeout:     1000,
 	}
 
-	in := make(chan string)
+	in := make(chan string, 1)
 
-	// Handle terminate signal like CTRL+C
+	// Handle terminate signal, ex CTRL+C
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		stop := make(chan os.Signal, 1)
@@ -59,20 +58,12 @@ func main() {
 		in:  in,
 		ctx: ctx,
 	}
-	wg := sync.WaitGroup{}
 
 	// Find serial port and connect
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		worker.autoConnect()
-	}()
+	go worker.autoConnect()
 
 	// Capture user screen or draw debug lines
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
-
 		if opt.IsDebug {
 			log.Println("Starting debug mode.\n* Red - top-left.\n* Green - top-right.\n* Blue - bottom-right.\n* Yellow - bottom-left.")
 		} else {
@@ -103,7 +94,7 @@ func main() {
 		}
 	}()
 
-	wg.Wait()
+	<-worker.ctx.Done()
 }
 
 func (worker *worker) drawDebug() []color.RGBA {
