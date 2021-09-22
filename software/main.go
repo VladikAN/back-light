@@ -85,9 +85,8 @@ func main() {
 				}
 
 				sb := &strings.Builder{}
-				for _, item := range rs {
-					sb.WriteString(String(&item))
-					sb.WriteString(";")
+				for _, c := range rs {
+					sb.WriteString(fmt.Sprintf("%02x%02x%02x;", c.R, c.G, c.B))
 				}
 				worker.in <- sb.String()
 			}
@@ -125,6 +124,10 @@ func (worker *worker) drawDebug() []color.RGBA {
 }
 
 func (worker *worker) drawScreen() []color.RGBA {
+	// take screenshot https://github.com/kbinani/screenshot/
+	// crop into 5 images (center + corners) https://github.com/disintegration/imaging
+	// find dominant colors https://github.com/EdlinOrg/prominentcolor
+
 	return nil
 }
 
@@ -173,10 +176,6 @@ func connect(input <-chan string) error {
 	}
 
 	return nil
-}
-
-func String(c *color.RGBA) string {
-	return fmt.Sprintf("%d,%d,%d", c.R, c.G, c.B)
 }
 
 func getPort() (string, error) {
