@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"image"
 	"image/color"
 	"log"
 	"os"
@@ -11,6 +12,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/EdlinOrg/prominentcolor"
+	"github.com/disintegration/imaging"
+	"github.com/kbinani/screenshot"
 	"go.bug.st/serial"
 )
 
@@ -37,7 +41,7 @@ func main() {
 	opt := &Options{
 		Width:       4,
 		Height:      4,
-		IsDebug:     true,
+		IsDebug:     false,
 		RefreshRate: 100,
 		Timeout:     1000,
 	}
@@ -78,10 +82,16 @@ func main() {
 				return // exit if ctx is done
 			case <-tick.C:
 				var rs []color.RGBA
+				var err error
 				if opt.IsDebug {
 					rs = worker.drawDebug()
 				} else {
-					rs = worker.drawScreen()
+					rs, err = worker.drawScreen()
+				}
+
+				if err != nil {
+					log.Printf("Error occured %s\n", err)
+					continue
 				}
 
 				sb := &strings.Builder{}
@@ -97,8 +107,7 @@ func main() {
 }
 
 func (worker *worker) drawDebug() []color.RGBA {
-	sz := worker.opt.Width*2 + worker.opt.Height*2
-	rs := make([]color.RGBA, sz)
+	var rs []color.RGBA
 
 	rs = append(rs, color.RGBA{R: 255})
 	for i := 1; i < worker.opt.Width-1; i++ {
@@ -123,12 +132,71 @@ func (worker *worker) drawDebug() []color.RGBA {
 	return rs
 }
 
-func (worker *worker) drawScreen() []color.RGBA {
-	// take screenshot https://github.com/kbinani/screenshot/
-	// crop into 5 images (center + corners) https://github.com/disintegration/imaging
+func (worker *worker) drawScreen() ([]color.RGBA, error) {
 	// find dominant colors https://github.com/EdlinOrg/prominentcolor
 
-	return nil
+	// Take screenshot
+	fl, err := screenshot.CaptureDisplay(0)
+	if err != nil {
+		return nil, err
+	}
+
+	// Scale down screenshot and calc sizes
+	fl800 := imaging.Resize(fl, 800, 0, imaging.Box)
+	wd := fl800.Rect.Max.X
+	ws := wd / worker.opt.Width
+	hg := fl800.Rect.Max.Y
+	hs := hg / worker.opt.Height
+
+	// Crop image into smaller, dependending on LED width / height
+	// Find dominant color for each piece
+	var rs []color.RGBA
+
+	// top - from left to right
+	for i := 0; i < worker.opt.Width-1; i++ {
+		pt := imaging.Crop(fl800, image.Rectangle{
+			Min: image.Point{X: ws * i, Y: 0},
+			Max: image.Point{X: ws * (i + 1), Y: hs},
+		})
+
+		c, _ := prominentcolor.KmeansWithAll(1, pt, prominentcolor.ArgumentDefault, prominentcolor.DefaultSize, nil)
+		rs = append(rs, color.RGBA{R: uint8(c[0].Color.R), G: uint8(c[0].Color.G), B: uint8(c[0].Color.B)})
+	}
+
+	// right - from top to bottom
+	for i := 0; i < worker.opt.Height-1; i++ {
+		pt := imaging.Crop(fl800, image.Rectangle{
+			Min: image.Point{X: wd - ws, Y: hs * i},
+			Max: image.Point{X: wd, Y: hs * (i + 1)},
+		})
+
+		c, _ := prominentcolor.KmeansWithAll(1, pt, prominentcolor.ArgumentDefault, prominentcolor.DefaultSize, nil)
+		rs = append(rs, color.RGBA{R: uint8(c[0].Color.R), G: uint8(c[0].Color.G), B: uint8(c[0].Color.B)})
+	}
+
+	// bottom - from right to left
+	for i := 0; i < worker.opt.Width-1; i++ {
+		pt := imaging.Crop(fl800, image.Rectangle{
+			Min: image.Point{X: wd - ws*(i+1), Y: hg - hs},
+			Max: image.Point{X: wd - ws*i, Y: hg},
+		})
+
+		c, _ := prominentcolor.KmeansWithAll(1, pt, prominentcolor.ArgumentDefault, prominentcolor.DefaultSize, nil)
+		rs = append(rs, color.RGBA{R: uint8(c[0].Color.R), G: uint8(c[0].Color.G), B: uint8(c[0].Color.B)})
+	}
+
+	// left - from bottom to top
+	for i := 0; i < worker.opt.Height-1; i++ {
+		pt := imaging.Crop(fl800, image.Rectangle{
+			Min: image.Point{X: 0, Y: hg - hs*(i+1)},
+			Max: image.Point{X: ws, Y: hg - hs*i},
+		})
+
+		c, _ := prominentcolor.KmeansWithAll(1, pt, prominentcolor.ArgumentDefault, prominentcolor.DefaultSize, nil)
+		rs = append(rs, color.RGBA{R: uint8(c[0].Color.R), G: uint8(c[0].Color.G), B: uint8(c[0].Color.B)})
+	}
+
+	return rs, nil
 }
 
 func (worker *worker) autoConnect() {
