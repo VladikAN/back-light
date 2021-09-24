@@ -148,8 +148,6 @@ func (worker *worker) drawDebug() []color.RGBA {
 }
 
 func (worker *worker) drawScreen() ([]color.RGBA, error) {
-	// find dominant colors https://github.com/EdlinOrg/prominentcolor
-
 	// Take screenshot
 	fl, err := screenshot.CaptureDisplay(0)
 	if err != nil {
@@ -157,11 +155,11 @@ func (worker *worker) drawScreen() ([]color.RGBA, error) {
 	}
 
 	// Scale down screenshot and calc sizes
-	fl800 := imaging.Resize(fl, 800, 0, imaging.Box)
-	wd := fl800.Rect.Max.X
-	ws := wd / (worker.opt.Width + 1)
-	hg := fl800.Rect.Max.Y
-	hs := hg / (worker.opt.Height + 1)
+	downScale := imaging.Resize(fl, 320, 0, imaging.NearestNeighbor)
+	wf := downScale.Rect.Max.X
+	ws := wf / (worker.opt.Width + 1)
+	hf := downScale.Rect.Max.Y
+	hs := hf / (worker.opt.Height + 1)
 
 	// Crop image into smaller, dependending on LED width / height
 	// Find dominant color for each piece
@@ -169,7 +167,7 @@ func (worker *worker) drawScreen() ([]color.RGBA, error) {
 
 	// top - from left to right
 	for i := 0; i < worker.opt.Width; i++ {
-		pt := imaging.Crop(fl800, image.Rectangle{
+		pt := imaging.Crop(downScale, image.Rectangle{
 			Min: image.Point{X: ws * i, Y: 0},
 			Max: image.Point{X: ws * (i + 1), Y: hs},
 		})
@@ -180,9 +178,9 @@ func (worker *worker) drawScreen() ([]color.RGBA, error) {
 
 	// right - from top to bottom
 	for i := 0; i < worker.opt.Height; i++ {
-		pt := imaging.Crop(fl800, image.Rectangle{
-			Min: image.Point{X: wd - ws, Y: hs * i},
-			Max: image.Point{X: wd, Y: hs * (i + 1)},
+		pt := imaging.Crop(downScale, image.Rectangle{
+			Min: image.Point{X: wf - ws, Y: hs * i},
+			Max: image.Point{X: wf, Y: hs * (i + 1)},
 		})
 
 		c, _ := prominentcolor.KmeansWithAll(1, pt, prominentcolor.ArgumentDefault, prominentcolor.DefaultSize, nil)
@@ -191,9 +189,9 @@ func (worker *worker) drawScreen() ([]color.RGBA, error) {
 
 	// bottom - from right to left
 	for i := 0; i < worker.opt.Width; i++ {
-		pt := imaging.Crop(fl800, image.Rectangle{
-			Min: image.Point{X: wd - ws*(i+1), Y: hg - hs},
-			Max: image.Point{X: wd - ws*i, Y: hg},
+		pt := imaging.Crop(downScale, image.Rectangle{
+			Min: image.Point{X: wf - ws*(i+1), Y: hf - hs},
+			Max: image.Point{X: wf - ws*i, Y: hf},
 		})
 
 		c, _ := prominentcolor.KmeansWithAll(1, pt, prominentcolor.ArgumentDefault, prominentcolor.DefaultSize, nil)
@@ -202,9 +200,9 @@ func (worker *worker) drawScreen() ([]color.RGBA, error) {
 
 	// left - from bottom to top
 	for i := 0; i < worker.opt.Height; i++ {
-		pt := imaging.Crop(fl800, image.Rectangle{
-			Min: image.Point{X: 0, Y: hg - hs*(i+1)},
-			Max: image.Point{X: ws, Y: hg - hs*i},
+		pt := imaging.Crop(downScale, image.Rectangle{
+			Min: image.Point{X: 0, Y: hf - hs*(i+1)},
+			Max: image.Point{X: ws, Y: hf - hs*i},
 		})
 
 		c, _ := prominentcolor.KmeansWithAll(1, pt, prominentcolor.ArgumentDefault, prominentcolor.DefaultSize, nil)
