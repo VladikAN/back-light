@@ -29,6 +29,8 @@ type Options struct {
 	RefreshRate int
 	// Time ms between serial port searches
 	Timeout int64
+	// Invert axis
+	Invert bool
 }
 
 type worker struct {
@@ -44,6 +46,7 @@ func main() {
 		IsDebug:     false,
 		RefreshRate: 100,
 		Timeout:     1000,
+		Invert:      false,
 	}
 
 	in := make(chan string, 1)
@@ -94,10 +97,12 @@ func main() {
 					continue
 				}
 
+				rs = worker.prepareOutput(rs)
 				sb := &strings.Builder{}
 				for _, c := range rs {
 					sb.WriteString(fmt.Sprintf("%02x%02x%02x;", c.R, c.G, c.B))
 				}
+
 				worker.in <- sb.String()
 			}
 		}
@@ -106,26 +111,36 @@ func main() {
 	<-worker.ctx.Done()
 }
 
+func (worker *worker) prepareOutput(rs []color.RGBA) []color.RGBA {
+	if worker.opt.Invert {
+		for i, j := 0, len(rs)-1; i < j; i, j = i+1, j-1 {
+			rs[i], rs[j] = rs[j], rs[i]
+		}
+	}
+
+	return rs
+}
+
 func (worker *worker) drawDebug() []color.RGBA {
 	var rs []color.RGBA
 
 	rs = append(rs, color.RGBA{R: 255})
-	for i := 1; i < worker.opt.Width-1; i++ {
+	for i := 0; i < worker.opt.Width-1; i++ {
 		rs = append(rs, color.RGBA{})
 	}
 
 	rs = append(rs, color.RGBA{G: 255})
-	for i := 1; i < worker.opt.Height-1; i++ {
+	for i := 0; i < worker.opt.Height-1; i++ {
 		rs = append(rs, color.RGBA{})
 	}
 
 	rs = append(rs, color.RGBA{B: 255})
-	for i := 1; i < worker.opt.Width-1; i++ {
+	for i := 0; i < worker.opt.Width-1; i++ {
 		rs = append(rs, color.RGBA{})
 	}
 
 	rs = append(rs, color.RGBA{R: 255, G: 255})
-	for i := 1; i < worker.opt.Width-1; i++ {
+	for i := 0; i < worker.opt.Width-1; i++ {
 		rs = append(rs, color.RGBA{})
 	}
 
@@ -144,16 +159,16 @@ func (worker *worker) drawScreen() ([]color.RGBA, error) {
 	// Scale down screenshot and calc sizes
 	fl800 := imaging.Resize(fl, 800, 0, imaging.Box)
 	wd := fl800.Rect.Max.X
-	ws := wd / worker.opt.Width
+	ws := wd / (worker.opt.Width + 1)
 	hg := fl800.Rect.Max.Y
-	hs := hg / worker.opt.Height
+	hs := hg / (worker.opt.Height + 1)
 
 	// Crop image into smaller, dependending on LED width / height
 	// Find dominant color for each piece
 	var rs []color.RGBA
 
 	// top - from left to right
-	for i := 0; i < worker.opt.Width-1; i++ {
+	for i := 0; i < worker.opt.Width; i++ {
 		pt := imaging.Crop(fl800, image.Rectangle{
 			Min: image.Point{X: ws * i, Y: 0},
 			Max: image.Point{X: ws * (i + 1), Y: hs},
@@ -164,7 +179,7 @@ func (worker *worker) drawScreen() ([]color.RGBA, error) {
 	}
 
 	// right - from top to bottom
-	for i := 0; i < worker.opt.Height-1; i++ {
+	for i := 0; i < worker.opt.Height; i++ {
 		pt := imaging.Crop(fl800, image.Rectangle{
 			Min: image.Point{X: wd - ws, Y: hs * i},
 			Max: image.Point{X: wd, Y: hs * (i + 1)},
@@ -175,7 +190,7 @@ func (worker *worker) drawScreen() ([]color.RGBA, error) {
 	}
 
 	// bottom - from right to left
-	for i := 0; i < worker.opt.Width-1; i++ {
+	for i := 0; i < worker.opt.Width; i++ {
 		pt := imaging.Crop(fl800, image.Rectangle{
 			Min: image.Point{X: wd - ws*(i+1), Y: hg - hs},
 			Max: image.Point{X: wd - ws*i, Y: hg},
@@ -186,7 +201,7 @@ func (worker *worker) drawScreen() ([]color.RGBA, error) {
 	}
 
 	// left - from bottom to top
-	for i := 0; i < worker.opt.Height-1; i++ {
+	for i := 0; i < worker.opt.Height; i++ {
 		pt := imaging.Crop(fl800, image.Rectangle{
 			Min: image.Point{X: 0, Y: hg - hs*(i+1)},
 			Max: image.Point{X: ws, Y: hg - hs*i},
@@ -237,6 +252,7 @@ func connect(input <-chan string) error {
 
 	log.Printf("Connected to %s port\n", port)
 	for val := range input {
+		// log.Printf("- %s\n", val)
 		_, err := srl.Write([]byte(val))
 		if err != nil {
 			return err
