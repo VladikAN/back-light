@@ -1,9 +1,20 @@
 package backlight
 
 import (
+	"fmt"
 	"image/color"
 	"math"
+	"strings"
 )
+
+func (worker *Worker) ToSerial(rs []color.RGBA) string {
+	sb := &strings.Builder{}
+	for _, c := range rs {
+		sb.WriteString(fmt.Sprintf("%02x%02x%02x;", c.R, c.G, c.B))
+	}
+
+	return sb.String()
+}
 
 func (worker *Worker) FilterOutput(rs []color.RGBA) []color.RGBA {
 	// Invert sequence

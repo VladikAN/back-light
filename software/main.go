@@ -2,12 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"image/color"
 	"log"
 	"os"
 	"os/signal"
-	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -41,11 +40,19 @@ func main() {
 		Ctx: ctx,
 	}
 
+	wg := &sync.WaitGroup{}
+
 	// Find serial port and connect
-	go worker.AutoConnect()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		worker.AutoConnect()
+	}()
 
 	// Capture user screen or draw debug lines
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		if opt.IsDebug {
 			log.Println("Starting debug mode.\n* Red - top-left.\n* Green - top-right.\n* Blue - bottom-right.\n* Yellow - bottom-left.")
 		} else {
@@ -56,6 +63,7 @@ func main() {
 		for {
 			select {
 			case <-worker.Ctx.Done():
+				worker.In <- worker.ToSerial(worker.DrawEmpty())
 				close(worker.In)
 				return // exit if ctx is done
 			case <-tick.C:
@@ -73,15 +81,10 @@ func main() {
 				}
 
 				rs = worker.FilterOutput(rs)
-				sb := &strings.Builder{}
-				for _, c := range rs {
-					sb.WriteString(fmt.Sprintf("%02x%02x%02x;", c.R, c.G, c.B))
-				}
-
-				worker.In <- sb.String()
+				worker.In <- worker.ToSerial(rs)
 			}
 		}
 	}()
 
-	<-worker.Ctx.Done()
+	wg.Wait()
 }

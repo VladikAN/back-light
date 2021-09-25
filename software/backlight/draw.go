@@ -9,6 +9,16 @@ import (
 	"github.com/kbinani/screenshot"
 )
 
+func (worker *Worker) DrawEmpty() []color.RGBA {
+	var rs []color.RGBA
+	sz := worker.Opt.Width*2 + worker.Opt.Height*2
+	for i := 0; i < sz; i++ {
+		rs = append(rs, color.RGBA{})
+	}
+
+	return rs
+}
+
 func (worker *Worker) DrawDebug() []color.RGBA {
 	var rs []color.RGBA
 
