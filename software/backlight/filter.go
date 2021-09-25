@@ -1,13 +1,13 @@
-package main
+package backlight
 
 import (
 	"image/color"
 	"math"
 )
 
-func (worker *worker) filterOutput(rs []color.RGBA) []color.RGBA {
+func (worker *Worker) FilterOutput(rs []color.RGBA) []color.RGBA {
 	// Invert sequence
-	if worker.opt.Invert {
+	if worker.Opt.Invert {
 		for i, j := 0, len(rs)-1; i < j; i, j = i+1, j-1 {
 			rs[i], rs[j] = rs[j], rs[i]
 		}
@@ -20,7 +20,7 @@ func (worker *worker) filterOutput(rs []color.RGBA) []color.RGBA {
 		}
 
 		// Remove weak colors cause it has the same brightness like others
-		if item.R < 100 && item.G < 100 && item.B < 100 {
+		if item.R < 50 && item.G < 50 && item.B < 50 {
 			rs[index] = color.RGBA{}
 		}
 	}
