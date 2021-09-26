@@ -26,13 +26,15 @@ func (worker *Worker) FilterOutput(rs []color.RGBA) []color.RGBA {
 
 	for index, item := range rs {
 		// Remove dark gray color cause its brighter then others
-		if math.Abs(float64(item.R-item.G)) < 20 && math.Abs(float64(item.R-item.B)) < 20 && item.R < 100 {
+		if math.Abs(float64(item.R)-float64(item.G)) < 20 && math.Abs(float64(item.R)-float64(item.B)) < 20 && item.R < 100 {
 			rs[index] = color.RGBA{}
+			continue
 		}
 
 		// Remove weak colors cause it has the same brightness like others
 		if item.R < 50 && item.G < 50 && item.B < 50 {
 			rs[index] = color.RGBA{}
+			continue
 		}
 	}
 
