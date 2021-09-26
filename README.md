@@ -1,5 +1,7 @@
 # Back Light
 
+![version - 1 - demo](/pics/demo-min.jpg)
+
 I want to have an extra screen light. Depending on that happens on the screen I will get an extra colorful light behind the monitor or laptop.
 
 This repository consists of two programs:
