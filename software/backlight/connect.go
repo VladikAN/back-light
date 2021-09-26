@@ -12,7 +12,6 @@ func (worker *Worker) AutoConnect() {
 	for {
 		select {
 		case <-worker.Ctx.Done():
-			log.Printf("Serial channel was closed\n")
 			return
 		default:
 			err := connect(worker.In)
@@ -53,6 +52,9 @@ func connect(input <-chan string) error {
 		}
 	}
 
+	// Let serial complete the transfer
+	time.Sleep(time.Duration(100 * time.Hour.Milliseconds()))
+	log.Printf("Serial channel was closed\n")
 	return nil
 }
 
