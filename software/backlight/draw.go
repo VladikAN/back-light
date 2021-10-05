@@ -63,6 +63,11 @@ func (worker *Worker) DrawScreen() ([]color.RGBA, error) {
 	// Find dominant color for each piece
 	var rs []color.RGBA
 
+	getDominant := func(rs []color.RGBA, pt *image.NRGBA) []color.RGBA {
+		c, _ := prominentcolor.KmeansWithAll(1, pt, prominentcolor.ArgumentDefault, prominentcolor.DefaultSize, nil)
+		return append(rs, color.RGBA{R: uint8(c[0].Color.R), G: uint8(c[0].Color.G), B: uint8(c[0].Color.B)})
+	}
+
 	// top - from left to right
 	for i := 0; i < worker.Opt.Width; i++ {
 		pt := imaging.Crop(downScale, image.Rectangle{
@@ -70,8 +75,7 @@ func (worker *Worker) DrawScreen() ([]color.RGBA, error) {
 			Max: image.Point{X: ws * (i + 1), Y: hs},
 		})
 
-		c, _ := prominentcolor.KmeansWithAll(1, pt, prominentcolor.ArgumentDefault, prominentcolor.DefaultSize, nil)
-		rs = append(rs, color.RGBA{R: uint8(c[0].Color.R), G: uint8(c[0].Color.G), B: uint8(c[0].Color.B)})
+		rs = getDominant(rs, pt)
 	}
 
 	// right - from top to bottom
@@ -81,8 +85,7 @@ func (worker *Worker) DrawScreen() ([]color.RGBA, error) {
 			Max: image.Point{X: wf, Y: hs * (i + 1)},
 		})
 
-		c, _ := prominentcolor.KmeansWithAll(1, pt, prominentcolor.ArgumentDefault, prominentcolor.DefaultSize, nil)
-		rs = append(rs, color.RGBA{R: uint8(c[0].Color.R), G: uint8(c[0].Color.G), B: uint8(c[0].Color.B)})
+		rs = getDominant(rs, pt)
 	}
 
 	// bottom - from right to left
@@ -92,8 +95,7 @@ func (worker *Worker) DrawScreen() ([]color.RGBA, error) {
 			Max: image.Point{X: wf - ws*i, Y: hf},
 		})
 
-		c, _ := prominentcolor.KmeansWithAll(1, pt, prominentcolor.ArgumentDefault, prominentcolor.DefaultSize, nil)
-		rs = append(rs, color.RGBA{R: uint8(c[0].Color.R), G: uint8(c[0].Color.G), B: uint8(c[0].Color.B)})
+		rs = getDominant(rs, pt)
 	}
 
 	// left - from bottom to top
@@ -103,8 +105,7 @@ func (worker *Worker) DrawScreen() ([]color.RGBA, error) {
 			Max: image.Point{X: ws, Y: hf - hs*i},
 		})
 
-		c, _ := prominentcolor.KmeansWithAll(1, pt, prominentcolor.ArgumentDefault, prominentcolor.DefaultSize, nil)
-		rs = append(rs, color.RGBA{R: uint8(c[0].Color.R), G: uint8(c[0].Color.G), B: uint8(c[0].Color.B)})
+		rs = getDominant(rs, pt)
 	}
 
 	return rs, nil
