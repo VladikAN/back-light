@@ -13,9 +13,3 @@ This repository consists of two programs:
 ## Hardware
 
 Is an Arduino Nano with LED ring (CJMCU-2812-16) connected to 5V, GND and PIN 5.
-
-# TO DO
-
-* Measure GO program performance.
-
-* Update dominant color code to speedup the process.
