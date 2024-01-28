@@ -10,7 +10,11 @@ import (
 func (worker *Worker) ToSerial(rs []color.RGBA) string {
 	sb := &strings.Builder{}
 	for _, c := range rs {
-		sb.WriteString(fmt.Sprintf("%02x%02x%02x;", c.R, c.G, c.B))
+		if c.R == 0 && c.G == 0 && c.B == 0 {
+			sb.WriteString(";")
+		} else {
+			sb.WriteString(fmt.Sprintf("%02x%02x%02x;", c.R, c.G, c.B))
+		}
 	}
 
 	return sb.String()

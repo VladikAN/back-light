@@ -11,8 +11,10 @@ type Options struct {
 	IsDebug bool
 	// Time ms between screen captures and data transfer to serial port.
 	RefreshRate int
+	// Serial data speed, the same as Arduino has
+	SerialSpeed int
 	// Time ms between serial port searches
-	Timeout int64
+	ConnectTimeout int64
 	// Invert axis
 	Invert bool
 }

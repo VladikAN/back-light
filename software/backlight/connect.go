@@ -14,24 +14,24 @@ func (worker *Worker) AutoConnect() {
 		case <-worker.Ctx.Done():
 			return
 		default:
-			err := connect(worker.In)
+			err := worker.connect()
 			if err != nil {
 				log.Printf("ERROR unable to send data: %s\n", err)
-				log.Printf("Reconnect in %d ms\n", worker.Opt.Timeout)
-				time.Sleep(time.Duration(worker.Opt.Timeout * time.Hour.Milliseconds()))
+				log.Printf("Reconnect in %d ms\n", worker.Opt.ConnectTimeout)
+				time.Sleep(time.Duration(worker.Opt.ConnectTimeout * time.Hour.Milliseconds()))
 			}
 		}
 	}
 }
 
-func connect(input <-chan string) error {
+func (worker *Worker) connect() error {
 	port, err := getPort()
 	if err != nil {
 		return err
 	}
 
 	mode := &serial.Mode{
-		BaudRate: 9600,
+		BaudRate: worker.Opt.SerialSpeed,
 		Parity:   serial.NoParity,
 		DataBits: 8,
 		StopBits: serial.OneStopBit,
@@ -44,7 +44,7 @@ func connect(input <-chan string) error {
 	defer srl.Close()
 
 	log.Printf("Connected to %s port\n", port)
-	for val := range input {
+	for val := range worker.In {
 		// log.Printf("- %s\n", val)
 		_, err := srl.Write([]byte(val))
 		if err != nil {
@@ -67,7 +67,7 @@ func getPort() (string, error) {
 	if ln := len(ports); ln == 0 {
 		return "", fmt.Errorf("no serial ports available")
 	} else if ln > 1 {
-		log.Printf("WARN More than 1 serial port found. First in the list will be used\n")
+		log.Printf("WARN %d serial ports found, %s port is used\n", len(ports), ports[0])
 	}
 
 	return ports[0], nil

@@ -15,12 +15,13 @@ import (
 
 func main() {
 	opt := &backlight.Options{
-		Width:       4,
-		Height:      4,
-		IsDebug:     false,
-		RefreshRate: 100,
-		Timeout:     1000,
-		Invert:      true,
+		Width:          3,
+		Height:         3,
+		IsDebug:        false,
+		RefreshRate:    33,
+		SerialSpeed:    9600,
+		ConnectTimeout: 1000,
+		Invert:         false,
 	}
 
 	in := make(chan string, 1)
