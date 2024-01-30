@@ -1,7 +1,6 @@
 package backlight
 
 import (
-	"context"
 	"image/color"
 )
 
@@ -27,6 +26,5 @@ type Options struct {
 type Worker struct {
 	Opt  *Options
 	In   chan string
-	Ctx  context.Context
 	Prev []color.RGBA
 }

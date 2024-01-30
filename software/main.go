@@ -39,7 +39,6 @@ func main() {
 	worker := &backlight.Worker{
 		Opt: opt,
 		In:  in,
-		Ctx: ctx,
 	}
 
 	wg := &sync.WaitGroup{}
@@ -48,7 +47,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		worker.AutoConnect()
+		worker.AutoConnect(ctx)
 	}()
 
 	// Capture user screen or draw debug lines
@@ -64,7 +63,7 @@ func main() {
 		tick := time.NewTicker(time.Duration(worker.Opt.RefreshRate * int(time.Millisecond)))
 		for {
 			select {
-			case <-worker.Ctx.Done():
+			case <-ctx.Done():
 				worker.In <- worker.ToSerial(worker.DrawEmpty())
 				close(worker.In)
 				return // exit if ctx is done

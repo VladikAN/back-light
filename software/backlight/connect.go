@@ -1,6 +1,7 @@
 package backlight
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -8,10 +9,10 @@ import (
 	"go.bug.st/serial"
 )
 
-func (worker *Worker) AutoConnect() {
+func (worker *Worker) AutoConnect(ctx context.Context) {
 	for {
 		select {
-		case <-worker.Ctx.Done():
+		case <-ctx.Done():
 			return
 		default:
 			err := worker.connect()
