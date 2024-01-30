@@ -21,6 +21,7 @@ func main() {
 		RefreshRate:    33,
 		SerialSpeed:    9600,
 		ConnectTimeout: 1000,
+		ColorLimit:     32,
 		Invert:         false,
 	}
 

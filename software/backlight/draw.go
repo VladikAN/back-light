@@ -3,11 +3,14 @@ package backlight
 import (
 	"image"
 	"image/color"
+	"math"
 
 	"github.com/EdlinOrg/prominentcolor"
 	"github.com/disintegration/imaging"
 	"github.com/kbinani/screenshot"
 )
+
+const ImageMinSize int = 320
 
 func (worker *Worker) DrawEmpty() []color.RGBA {
 	var rs []color.RGBA
@@ -53,7 +56,7 @@ func (worker *Worker) DrawScreen() ([]color.RGBA, error) {
 	}
 
 	// Scale down screenshot and calc sizes
-	downScale := imaging.Resize(fl, 320, 0, imaging.NearestNeighbor)
+	downScale := imaging.Resize(fl, ImageMinSize, ImageMinSize, imaging.NearestNeighbor)
 	wf := downScale.Rect.Max.X
 	ws := wf / (worker.Opt.Width + 1)
 	hf := downScale.Rect.Max.Y
@@ -63,11 +66,6 @@ func (worker *Worker) DrawScreen() ([]color.RGBA, error) {
 	// Find dominant color for each piece
 	var rs []color.RGBA
 
-	getDominant := func(rs []color.RGBA, pt *image.NRGBA) []color.RGBA {
-		c, _ := prominentcolor.KmeansWithAll(1, pt, prominentcolor.ArgumentDefault, prominentcolor.DefaultSize, nil)
-		return append(rs, color.RGBA{R: uint8(c[0].Color.R), G: uint8(c[0].Color.G), B: uint8(c[0].Color.B)})
-	}
-
 	// top - from left to right
 	for i := 0; i < worker.Opt.Width; i++ {
 		pt := imaging.Crop(downScale, image.Rectangle{
@@ -75,7 +73,7 @@ func (worker *Worker) DrawScreen() ([]color.RGBA, error) {
 			Max: image.Point{X: ws * (i + 1), Y: hs},
 		})
 
-		rs = getDominant(rs, pt)
+		rs = worker.getDominant(rs, pt)
 	}
 
 	// right - from top to bottom
@@ -85,7 +83,7 @@ func (worker *Worker) DrawScreen() ([]color.RGBA, error) {
 			Max: image.Point{X: wf, Y: hs * (i + 1)},
 		})
 
-		rs = getDominant(rs, pt)
+		rs = worker.getDominant(rs, pt)
 	}
 
 	// bottom - from right to left
@@ -95,7 +93,7 @@ func (worker *Worker) DrawScreen() ([]color.RGBA, error) {
 			Max: image.Point{X: wf - ws*i, Y: hf},
 		})
 
-		rs = getDominant(rs, pt)
+		rs = worker.getDominant(rs, pt)
 	}
 
 	// left - from bottom to top
@@ -105,8 +103,40 @@ func (worker *Worker) DrawScreen() ([]color.RGBA, error) {
 			Max: image.Point{X: ws, Y: hf - hs*i},
 		})
 
-		rs = getDominant(rs, pt)
+		rs = worker.getDominant(rs, pt)
 	}
 
+	worker.Prev = rs
 	return rs, nil
+}
+
+func (worker *Worker) getDominant(rs []color.RGBA, pt *image.NRGBA) []color.RGBA {
+	c, _ := prominentcolor.KmeansWithAll(
+		1,
+		pt,
+		prominentcolor.ArgumentAverageMean|prominentcolor.ArgumentNoCropping,
+		prominentcolor.DefaultSize,
+		nil)
+
+	record := color.RGBA{}
+	if len(c) != 0 {
+		fc := c[0].Color
+		record = color.RGBA{R: uint8(fc.R), G: uint8(fc.G), B: uint8(fc.B)}
+	}
+
+	index := len(rs)
+	if len(worker.Prev) > index {
+		prev := worker.Prev[index]
+		limit := uint8(worker.Opt.ColorLimit)
+		if isSimilar(prev, record, limit) {
+			record = prev
+		}
+	}
+
+	return append(rs, record)
+}
+
+func isSimilar(a, b color.RGBA, limit uint8) bool {
+	d := math.Sqrt(math.Pow(float64(a.R)-float64(b.R), 2) + math.Pow(float64(a.G)-float64(b.G), 2) + math.Pow(float64(a.B)-float64(b.B), 2))
+	return d <= float64(limit)
 }

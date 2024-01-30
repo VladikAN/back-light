@@ -1,6 +1,9 @@
 package backlight
 
-import "context"
+import (
+	"context"
+	"image/color"
+)
 
 type Options struct {
 	// LED line width, how many LED's used for top and bottom parts of the screen. Can be formed in square or circle.
@@ -15,12 +18,15 @@ type Options struct {
 	SerialSpeed int
 	// Time ms between serial port searches
 	ConnectTimeout int64
+	// The limit to consider color value was not changed
+	ColorLimit int
 	// Invert axis
 	Invert bool
 }
 
 type Worker struct {
-	Opt *Options
-	In  chan string
-	Ctx context.Context
+	Opt  *Options
+	In   chan string
+	Ctx  context.Context
+	Prev []color.RGBA
 }

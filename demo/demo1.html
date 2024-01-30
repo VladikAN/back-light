@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style >
+            body {
+                background-color: #111;
+                overflow: hidden;
+            }
+
+            #wrapper {
+                width: 100vw;
+                height: 100vw;
+                margin: 0 auto;
+            }
+
+            #item {
+                display: block;
+                border-radius: 100%;
+                background-color: #ff0000;
+                width: 200px;
+                aspect-ratio: 1/1;
+
+                animation: 10s linear infinite;
+                animation-name: move;
+            }
+
+            @keyframes move {
+                from {
+                    background-color: #ff0000;
+                    transform: translate(5vw, 5vh);
+                }
+
+                to {
+                    background-color: #ff0000;
+                    transform: translate(5vw, 5vh);
+                }
+
+                25% {
+                    background-color: #00ff00;
+                    transform: translate(calc(90vw - 200px), 5vh);
+                }
+
+                50% {
+                    background-color: #0000ff;
+                    transform: translate(calc(90vw - 200px), calc(90vh - 200px));
+                }
+
+                75% {
+                    background-color: #ff00ff;
+                    transform: translate(5vw, calc(90vh - 200px));
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="wrapper">
+            <div id="item"></div>
+        </div>
+    </body>
+</html>
