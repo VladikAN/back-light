@@ -23,8 +23,13 @@ type Options struct {
 	Invert bool
 }
 
+type Cmd struct{}
+type QuitCmd struct{ Cmd }
+type PauseOrResumeCmd struct{ Cmd }
+
 type Worker struct {
-	Opt  *Options
-	In   chan string
-	Prev []color.RGBA
+	Opt     *Options
+	In      chan string
+	Prev    []color.RGBA
+	IsReady bool
 }

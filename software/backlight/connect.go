@@ -9,30 +9,39 @@ import (
 	"go.bug.st/serial"
 )
 
-func (worker *Worker) AutoConnect(ctx context.Context) {
+func (w *Worker) Connect(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			w.Abort()
 			return
 		default:
-			err := worker.connect()
+			err := w.connectSerial()
 			if err != nil {
 				log.Printf("ERROR unable to send data: %s\n", err)
-				log.Printf("Reconnect in %d ms\n", worker.Opt.ConnectTimeout)
-				time.Sleep(time.Duration(worker.Opt.ConnectTimeout * time.Hour.Milliseconds()))
+				log.Printf("Reconnect in %d ms\n", w.Opt.ConnectTimeout)
+				time.Sleep(time.Duration(w.Opt.ConnectTimeout * time.Hour.Milliseconds()))
 			}
 		}
 	}
 }
 
-func (worker *Worker) connect() error {
+func (w *Worker) Abort() {
+	if w.IsReady {
+		w.In <- w.ToSerial(w.DrawEmpty())
+	}
+
+	close(w.In)
+}
+
+func (w *Worker) connectSerial() error {
 	port, err := getPort()
 	if err != nil {
 		return err
 	}
 
 	mode := &serial.Mode{
-		BaudRate: worker.Opt.SerialSpeed,
+		BaudRate: w.Opt.SerialSpeed,
 		Parity:   serial.NoParity,
 		DataBits: 8,
 		StopBits: serial.OneStopBit,
@@ -44,8 +53,13 @@ func (worker *Worker) connect() error {
 	}
 	defer srl.Close()
 
+	w.IsReady = true
+	defer func() {
+		w.IsReady = false
+	}()
+
 	log.Printf("Connected to %s port\n", port)
-	for val := range worker.In {
+	for val := range w.In {
 		// log.Printf("- %s\n", val)
 		_, err := srl.Write([]byte(val))
 		if err != nil {

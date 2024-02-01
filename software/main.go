@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"image/color"
 	"log"
 	"os"
@@ -10,8 +11,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getlantern/systray"
 	"github.com/vladikan/back-light/backlight"
 )
+
+//go:embed static/icon.ico
+var trayIcon []byte
 
 func main() {
 	opt := &backlight.Options{
@@ -43,11 +48,13 @@ func main() {
 
 	wg := &sync.WaitGroup{}
 
+	initTrayWithContext(ctx, opt)
+
 	// Find serial port and connect
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		worker.AutoConnect(ctx)
+		worker.Connect(ctx)
 	}()
 
 	// Capture user screen or draw debug lines
@@ -64,8 +71,6 @@ func main() {
 		for {
 			select {
 			case <-ctx.Done():
-				worker.In <- worker.ToSerial(worker.DrawEmpty())
-				close(worker.In)
 				return // exit if ctx is done
 			case <-tick.C:
 				var rs []color.RGBA
@@ -82,10 +87,39 @@ func main() {
 				}
 
 				rs = worker.FilterOutput(rs)
-				worker.In <- worker.ToSerial(rs)
+				select {
+				case worker.In <- worker.ToSerial(rs):
+				default:
+				}
 			}
 		}
 	}()
 
 	wg.Wait()
+}
+
+func initTrayWithContext(ctx context.Context, opt *backlight.Options) {
+	onReady := func() {
+		systray.SetIcon(trayIcon)
+		systray.SetTitle("LED backlight")
+		systray.SetTooltip("LED backlight")
+
+		onPause := systray.AddMenuItem("Pause / Resume", "Stop / start sending LED commands")
+		onExit := systray.AddMenuItem("Exit", "Exit program")
+
+		go func() {
+			for {
+				select {
+				case <-onPause.ClickedCh:
+				case <-onExit.ClickedCh:
+				}
+			}
+		}()
+	}
+
+	onExit := func() {
+
+	}
+
+	systray.Register(onReady, onExit)
 }
