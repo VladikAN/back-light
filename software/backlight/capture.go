@@ -12,7 +12,7 @@ import (
 
 const ImageMinSize int = 320
 
-func (w *Worker) DrawEmpty() []color.RGBA {
+func (w *Worker) CaptureEmpty() []color.RGBA {
 	var rs []color.RGBA
 	sz := w.Opt.Width*2 + w.Opt.Height*2
 	for i := 0; i < sz; i++ {
@@ -22,7 +22,7 @@ func (w *Worker) DrawEmpty() []color.RGBA {
 	return rs
 }
 
-func (w *Worker) DrawDebug() []color.RGBA {
+func (w *Worker) CaptureDebug() []color.RGBA {
 	var rs []color.RGBA
 
 	rs = append(rs, color.RGBA{R: 255})
@@ -48,7 +48,7 @@ func (w *Worker) DrawDebug() []color.RGBA {
 	return rs
 }
 
-func (w *Worker) DrawScreen() ([]color.RGBA, error) {
+func (w *Worker) CaptureScreen() ([]color.RGBA, error) {
 	// Take screenshot
 	fl, err := screenshot.CaptureDisplay(0)
 	if err != nil {

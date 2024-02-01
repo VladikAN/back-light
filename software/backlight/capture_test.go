@@ -2,12 +2,12 @@ package backlight
 
 import "testing"
 
-func BenchmarkDrawScreen(b *testing.B) {
+func BenchmarkCaptureScreen(b *testing.B) {
 	worker := Worker{
 		Opt: &Options{Width: 4, Height: 4, IsDebug: false},
 	}
 
-	rs, err := worker.DrawScreen()
+	rs, err := worker.CaptureScreen()
 	if err != nil {
 		b.Errorf("Benchmark completed with error %s", err)
 	}

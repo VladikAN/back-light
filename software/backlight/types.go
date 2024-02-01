@@ -28,8 +28,9 @@ type QuitCmd struct{ Cmd }
 type PauseOrResumeCmd struct{ Cmd }
 
 type Worker struct {
-	Opt     *Options
-	In      chan string
-	Prev    []color.RGBA
-	IsReady bool
+	Opt      *Options
+	In       chan string
+	Prev     []color.RGBA
+	IsReady  bool
+	IsPaused bool
 }

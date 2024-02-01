@@ -13,7 +13,7 @@ func (w *Worker) Connect(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			w.Abort()
+			w.abort()
 			return
 		default:
 			err := w.connectSerial()
@@ -26,9 +26,21 @@ func (w *Worker) Connect(ctx context.Context) {
 	}
 }
 
-func (w *Worker) Abort() {
+func (w *Worker) TogglePause() {
+	if w.IsPaused {
+		w.IsPaused = false
+		return
+	}
+
+	w.IsPaused = true
 	if w.IsReady {
-		w.In <- w.ToSerial(w.DrawEmpty())
+		w.In <- w.ToSerial(w.CaptureEmpty())
+	}
+}
+
+func (w *Worker) abort() {
+	if w.IsReady {
+		w.In <- w.ToSerial(w.CaptureEmpty())
 	}
 
 	close(w.In)

@@ -48,7 +48,7 @@ func main() {
 
 	wg := &sync.WaitGroup{}
 
-	initTrayWithContext(ctx, opt)
+	go initTrayWithContext(ctx, cancel, worker)
 
 	// Find serial port and connect
 	wg.Add(1)
@@ -73,12 +73,16 @@ func main() {
 			case <-ctx.Done():
 				return // exit if ctx is done
 			case <-tick.C:
+				if !worker.IsReady || worker.IsPaused {
+					continue
+				}
+
 				var rs []color.RGBA
 				var err error
 				if opt.IsDebug {
-					rs = worker.DrawDebug()
+					rs = worker.CaptureDebug()
 				} else {
-					rs, err = worker.DrawScreen()
+					rs, err = worker.CaptureScreen()
 				}
 
 				if err != nil {
@@ -98,7 +102,7 @@ func main() {
 	wg.Wait()
 }
 
-func initTrayWithContext(ctx context.Context, opt *backlight.Options) {
+func initTrayWithContext(ctx context.Context, cancel context.CancelFunc, w *backlight.Worker) {
 	onReady := func() {
 		systray.SetIcon(trayIcon)
 		systray.SetTitle("LED backlight")
@@ -111,7 +115,11 @@ func initTrayWithContext(ctx context.Context, opt *backlight.Options) {
 			for {
 				select {
 				case <-onPause.ClickedCh:
+					w.TogglePause()
+				case <-ctx.Done():
 				case <-onExit.ClickedCh:
+					cancel()
+					systray.Quit()
 				}
 			}
 		}()
@@ -121,5 +129,5 @@ func initTrayWithContext(ctx context.Context, opt *backlight.Options) {
 
 	}
 
-	systray.Register(onReady, onExit)
+	systray.Run(onReady, onExit)
 }
